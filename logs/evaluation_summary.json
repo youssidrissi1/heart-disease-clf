@@ -1,0 +1,8 @@
+{
+  "model": "xgb_seed42_d4",
+  "test_size": 45,
+  "f1_score": 0.878,
+  "auc": 0.9345,
+  "false_negatives": 3,
+  "false_positives": 2
+}

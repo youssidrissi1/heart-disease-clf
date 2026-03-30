@@ -35,6 +35,12 @@ python src/evaluate.py
 # Cross-validation (model comparison)
 python src/cross_validation.py
 
+# Hyperparameter tuning (GridSearchCV)
+python src/tune_hyperparameters.py
+
+# Generate evaluation artifacts (ROC, SHAP, summary)
+python src/generate_artifacts.py
+
 # Run tests
 pytest tests/ -v
 ```
@@ -62,20 +68,54 @@ curl -X POST http://localhost:8000/predict \
 **Health Check**:
 ```bash
 curl http://localhost:8000/health
+# Response: {"status":"healthy","model":"xgb_seed42_d4","version":"1.0"}
 ```
 
-**Single Prediction**:
+**Single Prediction** (example patient):
 ```bash
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
-  -d '{"age": 63, "sex": 1, "cp": 3, ...}'
+  -d '{
+    "age": 63,
+    "sex": 1,
+    "cp": 3,
+    "trestbps": 145,
+    "chol": 233,
+    "fbs": 1,
+    "restecg": 0,
+    "thalach": 150,
+    "exang": 0,
+    "oldpeak": 2.3,
+    "slope": 0,
+    "ca": 0,
+    "thal": 1
+  }'
+
+# Response:
+# {
+#   "prediction": 1,
+#   "probability": 0.9234,
+#   "latency_ms": 2.45,
+#   "confidence": "High"
+# }
 ```
 
-**Batch Predictions**:
+**Batch Predictions** (multiple samples):
 ```bash
 curl -X POST http://localhost:8000/batch_predict \
   -H "Content-Type: application/json" \
-  -d '[{"age": 63, "sex": 1, ...}, {"age": 45, "sex": 0, ...}]'
+  -d '[
+    {"age": 63, "sex": 1, "cp": 3, "trestbps": 145, "chol": 233, "fbs": 1, "restecg": 0, "thalach": 150, "exang": 0, "oldpeak": 2.3, "slope": 0, "ca": 0, "thal": 1},
+    {"age": 45, "sex": 0, "cp": 1, "trestbps": 120, "chol": 200, "fbs": 0, "restecg": 1, "thalach": 160, "exang": 1, "oldpeak": 1.0, "slope": 1, "ca": 0, "thal": 0}
+  ]'
+
+# Response:
+# {
+#   "count": 2,
+#   "results": [...],
+#   "total_latency_ms": 4.82,
+#   "avg_latency_ms": 2.41
+# }
 ```
 
 ## Project Structure
@@ -96,12 +136,13 @@ heart-disease-clf/
 ├── models/
 │   └── xgb_seed42_d4.json    # Trained XGBoost checkpoint
 ├── logs/
-│   ├── train_log.json        # Training metrics
-│   ├── confusion_matrix.png  # Test set confusion matrix
-│   ├── roc_curve.png         # ROC curve with AUC
-│   ├── shap_feature_importance.png
-│   ├── evaluation_summary.json
-│   └── cv_results.json       # Cross-validation results
+│   ├── train_log.json              # Training metrics
+│   ├── confusion_matrix.png        # Test set confusion matrix (TN=22, FP=2, FN=3, TP=18)
+│   ├── roc_curve.png               # ROC curve with AUC=0.935
+│   ├── shap_feature_importance.png # SHAP bar plot (top features: cp, thal, ca, age)
+│   ├── evaluation_summary.json     # Comprehensive metrics export
+│   ├── cv_results.json             # Cross-validation comparison
+│   └── hyperparameter_tuning.json  # GridSearchCV best params
 ├── Dockerfile                # Container image
 ├── docker-compose.yml        # Multi-service orchestration
 ├── requirements.txt          # Python dependencies
@@ -118,10 +159,16 @@ heart-disease-clf/
 
 ### 2. **Model Training**
 - XGBoost for gradient boosting (efficient on tabular data)
-- Hyperparameter tuning: max_depth ∈ {2,3,4,5,6}
+- **Hyperparameter tuning**: via GridSearchCV over:
+  - max_depth ∈ {3, 4, 5, 6}
+  - learning_rate ∈ {0.01, 0.1, 0.3}
+  - subsample ∈ {0.7, 0.8, 0.9}
+  - colsample_bytree ∈ {0.7, 0.8, 1.0}
+  - reg_lambda ∈ {0.1, 1.0, 10.0}
 - Seed-setting for reproducibility (`random`, `numpy`, `PYTHONHASHSEED`)
 - Early stopping via validation set
 - Configuration via argparse
+- **Optional feature engineering**: age-chol interaction, HR/BP ratio, ST-age interaction, normalized cholesterol
 
 ### 3. **Evaluation & Error Analysis**
 - **Metrics**: F1-score (0.7692), AUC (0.877), accuracy, precision, recall
