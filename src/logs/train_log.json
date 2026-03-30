@@ -1,0 +1,11 @@
+{
+  "val_f1": 0.7692,
+  "val_auc": 0.877,
+  "params": {
+    "data_path": "../data/heart.csv",
+    "seed": 42,
+    "lr": 0.1,
+    "max_depth": 4,
+    "n_estimators": 200
+  }
+}
