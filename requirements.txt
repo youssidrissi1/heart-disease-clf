@@ -6,3 +6,7 @@ matplotlib==3.10.8
 seaborn==0.13.2
 kaggle==2.0.0
 pytest==9.0.2
+fastapi==0.109.0
+uvicorn==0.27.0
+shap==0.14.1
+pydantic==2.6.0
